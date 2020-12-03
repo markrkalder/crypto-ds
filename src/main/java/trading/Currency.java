@@ -80,6 +80,7 @@ public class Currency {
     }
 
     //Used for BACKTESTING
+    //TODO: This should let the caller know when it has finished
     public Currency(String pair, String filePath) throws BinanceApiException {
         this.pair = pair;
         try (PriceReader reader = new PriceReader(filePath)) {

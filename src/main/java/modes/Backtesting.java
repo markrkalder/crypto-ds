@@ -29,6 +29,7 @@ public final class Backtesting {
         return localAccount;
     }
 
+    //TODO: Have this return the bot performance - base performance for ML fitness
     public static void startBacktesting() {
         localAccount = new LocalAccount("Investor Toomas", startingValue);
         BuySell.setAccount(localAccount);
