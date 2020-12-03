@@ -107,6 +107,7 @@ public class Currency {
 
     }
 
+    //TODO: Have option to disable indicator confluence and use ML binary instead
     private void accept(PriceBean bean) {
         //Make sure we dont get concurrency issues
         if (currentlyCalculating.get()) {
