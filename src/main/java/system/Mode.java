@@ -12,7 +12,7 @@ public enum Mode {
         return state;
     }
 
-    static void set(Mode state) {
+    public static void set(Mode state) {
         Mode.state = state;
     }
 }

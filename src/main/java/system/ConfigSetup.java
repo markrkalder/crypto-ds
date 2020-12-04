@@ -22,32 +22,32 @@ import java.util.stream.Collectors;
 //TODO: Remove boilerplate from ConfigSetup
 //TODO: Create FIAT config option and replace "USDT" in code with it
 public class ConfigSetup {
-    private double moneyPerTrade;
-    private long minutesForCollection;
-    private double startingValue;
-    private String[] currencies;
-    private double MACDChange;
-    private int RSIPosMax;
-    private int RSIPosMin;
-    private int RSINegMax;
-    private int RSINegMin;
-    private double trailingSL;
-    private double takeP;
+    private static double moneyPerTrade;
+    private static long minutesForCollection;
+    private static double startingValue;
+    private static String[] currencies;
+    private static double MACDChange;
+    private static int RSIPosMax;
+    private static int RSIPosMin;
+    private static int RSINegMax;
+    private static int RSINegMin;
+    private static double trailingSL;
+    private static double takeP;
     private static final int requestLimit = CurrentAPI.get().getExchangeInfo().getRateLimits().stream()
             .filter(rateLimit -> rateLimit.getRateLimitType().equals(RateLimitType.REQUEST_WEIGHT))
             .findFirst().map(RateLimit::getLimit).orElse(1200);
 
     private static String setup;
 
-    public ConfigSetup() {
-        readFile();
+    private ConfigSetup() {
+        throw new IllegalStateException("Utility class");
     }
 
     public static String getSetup() {
         return setup;
     }
 
-    public void readFile() {
+    public static void init() {
         //TODO: Move this somewhere else
         Formatter.getSimpleFormatter().setTimeZone(TimeZone.getDefault());
         int items = 0;
@@ -137,47 +137,46 @@ public class ConfigSetup {
         RSI.setNegativeMin(getRSINegMin()); //When RSI reaches this value, it returns -1 as a signal.
         RSI.setNegativeMax(getRSINegMax()); //When RSI reaches this value it returns -2 as a signal.
 
-        setup = toString();
+        setup = getConfig();
     }
 
     public static int getRequestLimit() {
         return requestLimit;
     }
 
-    public double getMoneyPerTrade() {
+    public static double getMoneyPerTrade() {
         return moneyPerTrade;
     }
 
-    public double getStartingValue() {
+    public static double getStartingValue() {
         return startingValue;
     }
 
-    public String[] getCurrencies() {
+    public static String[] getCurrencies() {
         return currencies;
     }
 
-    public double getMACDChange() {
+    public static double getMACDChange() {
         return MACDChange;
     }
 
-    public int getRSIPosMax() {
+    public static int getRSIPosMax() {
         return RSIPosMax;
     }
 
-    public int getRSIPosMin() {
+    public static int getRSIPosMin() {
         return RSIPosMin;
     }
 
-    public int getRSINegMax() {
+    public static int getRSINegMax() {
         return RSINegMax;
     }
 
-    public int getRSINegMin() {
+    public static int getRSINegMin() {
         return RSINegMin;
     }
 
-    @Override
-    public String toString() {
+    public static String getConfig() {
         return "MACD change indicator:" + MACDChange + "\n" +
                 "RSI positive side minimum:" + RSIPosMin + "\n" +
                 "RSI positive side maximum:" + RSIPosMax + "\n" +

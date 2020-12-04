@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,7 @@ public class Currency {
     private long candleTime;
     private final List<Indicator> indicators = new ArrayList<>();
     private final AtomicBoolean currentlyCalculating = new AtomicBoolean(false);
+    private double backtestingResult;
 
     private double currentPrice;
     private long currentTime;
@@ -80,7 +82,6 @@ public class Currency {
     }
 
     //Used for BACKTESTING
-    //TODO: This should let the caller know when it has finished
     public Currency(String pair, String filePath) throws BinanceApiException {
         this.pair = pair;
         try (PriceReader reader = new PriceReader(filePath)) {
@@ -100,11 +101,14 @@ public class Currency {
                 accept(bean);
                 bean = reader.readPrice();
             }
-
+            for (Trade trade : BuySell.getAccount().getActiveTrades()) {
+                trade.setExplanation(trade.getExplanation() + "Manually closed");
+                BuySell.close(trade);
+            }
+            backtestingResult = BuySell.getAccount().getProfit() - ((currentPrice - firstBean.getPrice()) / firstBean.getPrice());
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     //TODO: Have option to disable indicator confluence and use ML binary instead
@@ -142,6 +146,10 @@ public class Currency {
         }
 
         currentlyCalculating.set(false);
+    }
+
+    public double getBacktestingResult() {
+        return backtestingResult;
     }
 
     public int check() {

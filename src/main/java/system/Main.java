@@ -14,7 +14,7 @@ public class Main {
 
     public static void main(String[] args) {
         //Program config.
-        new ConfigSetup();
+        ConfigSetup.init();
         System.out.println("Welcome to TradeBot\n" +
                 "(made by Markus Aksli, Marten Türk, and Mark Robin Kalder)\n" +
                 "\n" +
