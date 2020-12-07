@@ -89,10 +89,10 @@ public class DBB implements Indicator {
         return 0;
     }
 
-    public double getTempRelative(){
+    public double getTempRelative(double newPrice) {
         double tempMidBand = sma.getTemp(newPrice);
         double tempStdev = sma.tempStandardDeviation(newPrice);
-        return tempStdev/tempMidBand;
+        return tempStdev / tempMidBand;
     }
 
     @Override
