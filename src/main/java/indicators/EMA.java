@@ -13,7 +13,6 @@ public class EMA implements Indicator {
     private final double multiplier;
     private final List<Double> EMAhistory;
     private final boolean historyNeeded;
-    private String fileName;
 
     public EMA(List<Double> closingPrices, int period, boolean historyNeeded) {
         currentEMA = 0;
@@ -32,6 +31,11 @@ public class EMA implements Indicator {
     @Override
     public double getTemp(double newPrice) {
         return (newPrice - currentEMA) * multiplier + currentEMA;
+    }
+
+    public double getTempRelative(double newPrice) {
+        final double temp = getTemp(newPrice);
+        return (newPrice - temp) / temp;
     }
 
     @Override

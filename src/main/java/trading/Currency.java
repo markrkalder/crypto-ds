@@ -111,6 +111,37 @@ public class Currency {
         }
     }
 
+    //Used for ML
+    public Currency(String pair, String filePath, String outputPath) throws BinanceApiException {
+        this.pair = pair;
+        try (PriceReader reader = new PriceReader(filePath)) {
+            PriceBean bean = reader.readPrice();
+
+            firstBean = bean;
+            List<Double> closingPrices = new ArrayList<>();
+            while (bean.isClosing()) {
+                closingPrices.add(bean.getPrice());
+                bean = reader.readPrice();
+            }
+
+            //TODO: Fix slight mismatch between MACD backtesting and server values.
+            indicators.add(new RSI(closingPrices, 14));
+            indicators.add(new MACD(closingPrices, 12, 26, 9));
+            indicators.add(new DBB(closingPrices, 20));
+            while (bean != null) {
+                accept(bean);
+                bean = reader.readPrice();
+            }
+            for (Trade trade : BuySell.getAccount().getActiveTrades()) {
+                trade.setExplanation(trade.getExplanation() + "Manually closed");
+                BuySell.close(trade);
+            }
+            backtestingResult = BuySell.getAccount().getProfit() - ((currentPrice - firstBean.getPrice()) / firstBean.getPrice());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     //TODO: Have option to disable indicator confluence and use ML binary instead
     private void accept(PriceBean bean) {
         //Make sure we dont get concurrency issues
