@@ -51,8 +51,9 @@ public class Currency {
         indicators.add(new RSI(closingPrices, 14));
         indicators.add(new MACD(closingPrices, 12, 26, 9));
         indicators.add(new DBB(closingPrices, 20));
+        indicators.add(new EMA(closingPrices, 10, false));
+        indicators.add(new EMA(closingPrices, 21, false));
         indicators.add(new EMA(closingPrices, 50, false));
-        indicators.add(new EMA(closingPrices, 200, false));
 
         //We set the initial values to check against in onMessage based on the latest candle in history
         currentTime = System.currentTimeMillis();
@@ -275,7 +276,18 @@ public class Currency {
         if (currentTime == candleTime)
             indicators.forEach(indicator -> s.append(", ").append(indicator.getClass().getSimpleName()).append(": ").append(system.Formatter.formatDecimal(indicator.get())));
         else
-            indicators.forEach(indicator -> s.append(", ").append(indicator.getClass().getSimpleName()).append(": ").append(Formatter.formatDecimal(indicator.getTemp(currentPrice))));
+            indicators.forEach(indicator -> {
+                s.append(", ").append(indicator.getClass().getSimpleName()).append(": ");
+                if (indicator.getClass() == DBB.class) {
+                    s.append(Formatter.formatDecimal(((DBB) indicator).getTempRelative(currentPrice)));
+                } else if (indicator.getClass() == EMA.class) {
+                    s.append(Formatter.formatDecimal(((EMA) indicator).getTempRelative(currentPrice)));
+                } else if (indicator.getClass() == MACD.class) {
+                    s.append(Formatter.formatDecimal(((MACD) indicator).getTempRelative(currentPrice)));
+                } else {
+                    s.append(Formatter.formatDecimal(indicator.getTemp(currentPrice)));
+                }
+            });
         s.append(", hasActive: ").append(hasActiveTrade()).append(")");
         return s.toString();
     }

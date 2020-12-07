@@ -35,7 +35,7 @@ public class EMA implements Indicator {
 
     public double getTempRelative(double newPrice) {
         final double temp = getTemp(newPrice);
-        return (newPrice - temp) / temp;
+        return ((newPrice - temp) / temp) * 10000;
     }
 
     @Override

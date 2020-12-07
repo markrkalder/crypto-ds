@@ -49,6 +49,12 @@ public class DBB implements Indicator {
             return 0;
     }
 
+    public double getTempRelative(double newPrice) {
+        double tempMidBand = sma.getTemp(newPrice);
+        double tempStdev = sma.tempStandardDeviation(newPrice);
+        return (tempStdev / tempMidBand) * 1000;
+    }
+
     @Override
     public void init(List<Double> closingPrices) {
         if (period > closingPrices.size()) return;
@@ -56,7 +62,7 @@ public class DBB implements Indicator {
         closingPrice = closingPrices.size() - 2;
         standardDeviation = sma.standardDeviation();
         middleBand = sma.get();
-        upperBand = middleBand + standardDeviation*2;
+        upperBand = middleBand + standardDeviation * 2;
         upperMidBand = middleBand + standardDeviation;
         lowerMidBand = middleBand - standardDeviation;
         lowerBand = middleBand - standardDeviation*2;
@@ -89,11 +95,6 @@ public class DBB implements Indicator {
         return 0;
     }
 
-    public double getTempRelative(double newPrice) {
-        double tempMidBand = sma.getTemp(newPrice);
-        double tempStdev = sma.tempStandardDeviation(newPrice);
-        return tempStdev / tempMidBand;
-    }
 
     @Override
     public String getExplanation() {
