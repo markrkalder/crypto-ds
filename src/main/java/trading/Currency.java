@@ -1,15 +1,12 @@
 package trading;
 
-import data.PriceBean;
-import data.PriceReader;
 import com.binance.api.client.BinanceApiWebSocketClient;
 import com.binance.api.client.domain.market.Candlestick;
 import com.binance.api.client.domain.market.CandlestickInterval;
 import com.binance.api.client.exception.BinanceApiException;
-import indicators.DBB;
-import indicators.Indicator;
-import indicators.MACD;
-import indicators.RSI;
+import data.PriceBean;
+import data.PriceReader;
+import indicators.*;
 import system.ConfigSetup;
 import system.Formatter;
 import system.Mode;
@@ -19,8 +16,10 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -52,6 +51,8 @@ public class Currency {
         indicators.add(new RSI(closingPrices, 14));
         indicators.add(new MACD(closingPrices, 12, 26, 9));
         indicators.add(new DBB(closingPrices, 20));
+        indicators.add(new EMA(closingPrices, 50, false));
+        indicators.add(new EMA(closingPrices, 200, false));
 
         //We set the initial values to check against in onMessage based on the latest candle in history
         currentTime = System.currentTimeMillis();
@@ -124,7 +125,6 @@ public class Currency {
                 bean = reader.readPrice();
             }
 
-            //TODO: Fix slight mismatch between MACD backtesting and server values.
             indicators.add(new RSI(closingPrices, 14));
             indicators.add(new MACD(closingPrices, 12, 26, 9));
             indicators.add(new DBB(closingPrices, 20));

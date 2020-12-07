@@ -46,6 +46,15 @@ public class MACD implements Indicator {
         return tempMACD - tempSignal; //Getting the difference between the two signals.
     }
 
+    public double getTempRelative(double newPrice) {
+        double longTemp = longEMA.getTemp(newPrice);
+        double shortTemp = shortEMA.getTemp(newPrice);
+
+        double tempMACD = shortTemp - longTemp;
+        double tempSignal = tempMACD * multiplier + currentSignal * (1 - multiplier);
+        return (tempMACD - tempSignal) / tempSignal;
+    }
+
     @Override
     public void init(List<Double> closingPrices) {
         //Initial signal line
