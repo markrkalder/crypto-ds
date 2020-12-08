@@ -13,6 +13,7 @@ import system.Mode;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -51,9 +52,6 @@ public class Currency {
         indicators.add(new RSI(closingPrices, 14));
         indicators.add(new MACD(closingPrices, 12, 26, 9));
         indicators.add(new DBB(closingPrices, 20));
-        indicators.add(new EMA(closingPrices, 10, false));
-        indicators.add(new EMA(closingPrices, 21, false));
-        indicators.add(new EMA(closingPrices, 50, false));
 
         //We set the initial values to check against in onMessage based on the latest candle in history
         currentTime = System.currentTimeMillis();
@@ -129,10 +127,49 @@ public class Currency {
             indicators.add(new RSI(closingPrices, 14));
             indicators.add(new MACD(closingPrices, 12, 26, 9));
             indicators.add(new DBB(closingPrices, 20));
-            while (bean != null) {
-                accept(bean);
-                bean = reader.readPrice();
+            indicators.add(new EMA(closingPrices, 9, false));
+            indicators.add(new EMA(closingPrices, 21, false));
+            indicators.add(new EMA(closingPrices, 50, false));
+
+            if (outputPath != null) {
+                long count = 0;
+                long totalCount = 1;
+                try (PriceReader tempReader = new PriceReader(filePath)) {
+                    PriceBean tempBean = tempReader.readPrice();
+                    while (tempBean != null) {
+                        totalCount++;
+                        tempBean = tempReader.readPrice();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Data file contains " + Formatter.formatLarge(totalCount) + " entries");
+                System.out.println("Indicators: " + getIndicatorCsvHeader().replace(",", ", "));
+                System.out.println("Calculating indicator values for each entry...");
+                try (PrintWriter writer = new PrintWriter(outputPath)) {
+                    writer.write(getIndicatorCsvHeader());
+                    int printCount = 0;
+                    while (bean != null) {
+                        count++;
+                        printCount++;
+                        if (printCount == 100) {
+                            System.out.print('\r' + Formatter.formatPercent((double) count / totalCount));
+                            printCount = 0;
+                        }
+                        acceptMl(bean, true);
+                        writer.write(getIndicatorCsv());
+                        bean = reader.readPrice();
+                    }
+                }
+                System.out.print('\r' + Formatter.formatPercent(1));
+                System.out.println("\nDone");
+            } else {
+                while (bean != null) {
+                    acceptMl(bean, false);
+                    bean = reader.readPrice();
+                }
             }
+
             for (Trade trade : BuySell.getAccount().getActiveTrades()) {
                 trade.setExplanation(trade.getExplanation() + "Manually closed");
                 BuySell.close(trade);
@@ -143,7 +180,6 @@ public class Currency {
         }
     }
 
-    //TODO: Have option to disable indicator confluence and use ML binary instead
     private void accept(PriceBean bean) {
         //Make sure we dont get concurrency issues
         if (currentlyCalculating.get()) {
@@ -178,6 +214,19 @@ public class Currency {
         }
 
         currentlyCalculating.set(false);
+    }
+
+    private void acceptMl(PriceBean bean, boolean onlyUpdate) {
+        currentPrice = bean.getPrice();
+        currentTime = bean.getTimestamp();
+
+        if (bean.isClosing()) {
+            indicators.forEach(indicator -> indicator.update(bean.getPrice()));
+        }
+
+        if (!onlyUpdate) {
+            //TODO: Use tensorflow model here to check for signals\
+        }
     }
 
     public double getBacktestingResult() {
@@ -270,6 +319,49 @@ public class Currency {
         System.out.println("---Log file generated at " + path);
     }
 
+    private String getIndicatorCsv() {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < indicators.size(); i++) {
+            Indicator indicator = indicators.get(i);
+            if (indicator.getClass() == DBB.class) {
+                s.append(((DBB) indicator).getStdevRelative(currentPrice));
+                s.append(',');
+                s.append(indicator.getTemp(currentPrice));
+            } else if (indicator.getClass() == EMA.class) {
+                s.append(((EMA) indicator).getTempRelative(currentPrice));
+            } else if (indicator.getClass() == MACD.class) {
+                s.append(((MACD) indicator).getTempRelative(currentPrice));
+            } else {
+                s.append(indicator.getTemp(currentPrice));
+            }
+            if (i != indicators.size() - 1) s.append(',');
+        }
+        s.append('\n');
+        return s.toString();
+    }
+
+    private String getIndicatorCsvHeader() {
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < indicators.size(); i++) {
+            Indicator indicator = indicators.get(i);
+            if (indicator.getClass() == DBB.class) {
+                s.append("RSD");
+                s.append(',');
+                s.append("DBB");
+            } else if (indicator.getClass() == EMA.class) {
+                s.append("REMA_");
+                s.append(((EMA) indicator).getPeriod());
+            } else if (indicator.getClass() == MACD.class) {
+                s.append("RMACD");
+            } else {
+                s.append(indicator.getClass().getSimpleName());
+            }
+            if (i != indicators.size() - 1) s.append(',');
+        }
+        s.append('\n');
+        return s.toString();
+    }
+
     @Override
     public String toString() {
         StringBuilder s = new StringBuilder(pair + " price: " + currentPrice);
@@ -279,7 +371,7 @@ public class Currency {
             indicators.forEach(indicator -> {
                 s.append(", ").append(indicator.getClass().getSimpleName()).append(": ");
                 if (indicator.getClass() == DBB.class) {
-                    s.append(Formatter.formatDecimal(((DBB) indicator).getTempRelative(currentPrice)));
+                    s.append(Formatter.formatDecimal(((DBB) indicator).getStdevRelative(currentPrice)));
                 } else if (indicator.getClass() == EMA.class) {
                     s.append(Formatter.formatDecimal(((EMA) indicator).getTempRelative(currentPrice)));
                 } else if (indicator.getClass() == MACD.class) {
