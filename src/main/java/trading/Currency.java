@@ -152,7 +152,7 @@ public class Currency {
                     while (bean != null) {
                         count++;
                         printCount++;
-                        if (printCount == 100) {
+                        if (printCount >= 100000) {
                             System.out.print('\r' + Formatter.formatPercent((double) count / totalCount));
                             printCount = 0;
                         }
