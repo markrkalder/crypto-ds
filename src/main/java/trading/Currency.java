@@ -149,11 +149,15 @@ public class Currency {
                 try (PrintWriter writer = new PrintWriter(outputPath)) {
                     writer.write(getCsvHeader());
                     int printCount = 0;
+                    long startTime = System.currentTimeMillis();
                     while (bean != null) {
                         count++;
                         printCount++;
                         if (printCount >= 100000) {
-                            System.out.print('\r' + Formatter.formatPercent((double) count / totalCount));
+                            final double percentage = (double) count / totalCount;
+                            final long timeSpent = System.currentTimeMillis() - startTime;
+                            final long estimate = (long) (timeSpent / percentage);
+                            System.out.print('\r' + Formatter.formatPercent(percentage) + '\t' + Formatter.formatDuration(estimate - timeSpent));
                             printCount = 0;
                         }
                         acceptMl(bean, true);
