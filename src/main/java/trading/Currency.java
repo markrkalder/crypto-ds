@@ -144,10 +144,10 @@ public class Currency {
                     e.printStackTrace();
                 }
                 System.out.println("Data file contains " + Formatter.formatLarge(totalCount) + " entries");
-                System.out.println("Indicators: " + getIndicatorCsvHeader().replace(",", ", "));
+                System.out.println("Features: " + getCsvHeader().replace(",", ", "));
                 System.out.println("Calculating indicator values for each entry...");
                 try (PrintWriter writer = new PrintWriter(outputPath)) {
-                    writer.write(getIndicatorCsvHeader());
+                    writer.write(getCsvHeader());
                     int printCount = 0;
                     while (bean != null) {
                         count++;
@@ -157,7 +157,7 @@ public class Currency {
                             printCount = 0;
                         }
                         acceptMl(bean, true);
-                        writer.write(getIndicatorCsv());
+                        writer.write(getCsvLine(bean));
                         bean = reader.readPrice();
                     }
                 }
@@ -319,20 +319,26 @@ public class Currency {
         System.out.println("---Log file generated at " + path);
     }
 
-    private String getIndicatorCsv() {
+    private String getCsvLine(PriceBean bean) {
         StringBuilder s = new StringBuilder();
+        s.append(bean.getTimestamp());
+        s.append(",");
+        s.append(bean.getPrice());
+        s.append(",");
+        s.append(bean.isClosing() ? 1 : 0);
+        s.append(",");
         for (int i = 0; i < indicators.size(); i++) {
             Indicator indicator = indicators.get(i);
             if (indicator.getClass() == DBB.class) {
-                s.append(((DBB) indicator).getStdevRelative(currentPrice));
+                s.append(((DBB) indicator).getStdevRelative(bean.getPrice()));
                 s.append(',');
-                s.append(indicator.getTemp(currentPrice));
+                s.append(indicator.getTemp(bean.getPrice()));
             } else if (indicator.getClass() == EMA.class) {
-                s.append(((EMA) indicator).getTempRelative(currentPrice));
+                s.append(((EMA) indicator).getTempRelative(bean.getPrice()));
             } else if (indicator.getClass() == MACD.class) {
-                s.append(((MACD) indicator).getTempRelative(currentPrice));
+                s.append(((MACD) indicator).getTempRelative(bean.getPrice()));
             } else {
-                s.append(indicator.getTemp(currentPrice));
+                s.append(indicator.getTemp(bean.getPrice()));
             }
             if (i != indicators.size() - 1) s.append(',');
         }
@@ -340,8 +346,9 @@ public class Currency {
         return s.toString();
     }
 
-    private String getIndicatorCsvHeader() {
+    private String getCsvHeader() {
         StringBuilder s = new StringBuilder();
+        s.append("time,price,close,");
         for (int i = 0; i < indicators.size(); i++) {
             Indicator indicator = indicators.get(i);
             if (indicator.getClass() == DBB.class) {
