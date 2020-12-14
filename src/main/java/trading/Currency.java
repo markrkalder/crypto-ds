@@ -33,6 +33,10 @@ public class Currency {
     private final List<Indicator> indicators = new ArrayList<>();
     private final AtomicBoolean currentlyCalculating = new AtomicBoolean(false);
     private double backtestingResult;
+    private double lastClose;
+    private double runningLow;
+    private double runningHigh;
+    private double runningOpen;
 
     private double currentPrice;
     private long currentTime;
@@ -93,7 +97,7 @@ public class Currency {
                 closingPrices.add(bean.getPrice());
                 bean = reader.readPrice();
             }
-            //TODO: Fix slight mismatch between MACD backtesting and server values.
+            //TODO: Fix slight mismatch between EMA backtesting and server values.
             indicators.add(new RSI(closingPrices, 14));
             indicators.add(new MACD(closingPrices, 12, 26, 9));
             indicators.add(new DBB(closingPrices, 20));
@@ -123,6 +127,10 @@ public class Currency {
                 closingPrices.add(bean.getPrice());
                 bean = reader.readPrice();
             }
+            lastClose = bean.getPrice();
+            runningHigh = bean.getPrice();
+            runningLow = bean.getPrice();
+            runningOpen = bean.getPrice();
 
             indicators.add(new RSI(closingPrices, 14));
             indicators.add(new MACD(closingPrices, 12, 26, 9));
@@ -161,7 +169,42 @@ public class Currency {
                             printCount = 0;
                         }
                         acceptMl(bean, true);
-                        writer.write(getCsvLine(bean));
+                        if (bean.isClosing()) {
+                            StringBuilder s = new StringBuilder();
+                            s.append(bean.getTimestamp());
+                            s.append(",");
+                            s.append(bean.getPrice());
+                            s.append(",");
+                            s.append((bean.getPrice() - runningOpen) / runningOpen);
+                            s.append(",");
+                            s.append((runningHigh - runningOpen) / runningOpen);
+                            s.append(",");
+                            s.append((runningLow - runningOpen) / runningOpen);
+                            s.append(",");
+                            s.append((bean.getPrice() - lastClose) / lastClose);
+                            s.append(",");
+                            for (int i = 0; i < indicators.size(); i++) {
+                                Indicator indicator = indicators.get(i);
+                                if (indicator.getClass() == DBB.class) {
+                                    s.append(((DBB) indicator).getStdevRelative(bean.getPrice()));
+                                    s.append(',');
+                                    s.append(indicator.getTemp(bean.getPrice()));
+                                } else if (indicator.getClass() == EMA.class) {
+                                    s.append(((EMA) indicator).getTempRelative(bean.getPrice()));
+                                } else if (indicator.getClass() == MACD.class) {
+                                    s.append(((MACD) indicator).getTempRelative(bean.getPrice()));
+                                } else {
+                                    s.append(indicator.getTemp(bean.getPrice()));
+                                }
+                                if (i != indicators.size() - 1) s.append(',');
+                            }
+                            s.append('\n');
+                            writer.write(s.toString());
+                            /*System.out.printf("%s open: %s high: %s low: %s close %s%n", Formatter.formatDate(bean.getTimestamp()), runningOpen, runningHigh, runningLow, bean.getPrice());
+                            System.out.println(toString());*/
+                            lastClose = bean.getPrice();
+                            runningOpen = -1;
+                        }
                         bean = reader.readPrice();
                     }
                 }
@@ -223,6 +266,15 @@ public class Currency {
     private void acceptMl(PriceBean bean, boolean onlyUpdate) {
         currentPrice = bean.getPrice();
         currentTime = bean.getTimestamp();
+
+        if (runningOpen == -1) {
+            runningHigh = currentPrice;
+            runningLow = currentPrice;
+            runningOpen = currentPrice;
+        } else {
+            if (currentPrice > runningHigh) runningHigh = currentPrice;
+            if (currentPrice < runningLow) runningLow = currentPrice;
+        }
 
         if (bean.isClosing()) {
             indicators.forEach(indicator -> indicator.update(bean.getPrice()));
@@ -323,36 +375,9 @@ public class Currency {
         System.out.println("---Log file generated at " + path);
     }
 
-    private String getCsvLine(PriceBean bean) {
-        StringBuilder s = new StringBuilder();
-        s.append(bean.getTimestamp());
-        s.append(",");
-        s.append(bean.getPrice());
-        s.append(",");
-        s.append(bean.isClosing() ? 1 : 0);
-        s.append(",");
-        for (int i = 0; i < indicators.size(); i++) {
-            Indicator indicator = indicators.get(i);
-            if (indicator.getClass() == DBB.class) {
-                s.append(((DBB) indicator).getStdevRelative(bean.getPrice()));
-                s.append(',');
-                s.append(indicator.getTemp(bean.getPrice()));
-            } else if (indicator.getClass() == EMA.class) {
-                s.append(((EMA) indicator).getTempRelative(bean.getPrice()));
-            } else if (indicator.getClass() == MACD.class) {
-                s.append(((MACD) indicator).getTempRelative(bean.getPrice()));
-            } else {
-                s.append(indicator.getTemp(bean.getPrice()));
-            }
-            if (i != indicators.size() - 1) s.append(',');
-        }
-        s.append('\n');
-        return s.toString();
-    }
-
     private String getCsvHeader() {
         StringBuilder s = new StringBuilder();
-        s.append("time,price,close,");
+        s.append("time,price,candle_change,high,low,last_close_change,");
         for (int i = 0; i < indicators.size(); i++) {
             Indicator indicator = indicators.get(i);
             if (indicator.getClass() == DBB.class) {
@@ -379,18 +404,7 @@ public class Currency {
         if (currentTime == candleTime)
             indicators.forEach(indicator -> s.append(", ").append(indicator.getClass().getSimpleName()).append(": ").append(system.Formatter.formatDecimal(indicator.get())));
         else
-            indicators.forEach(indicator -> {
-                s.append(", ").append(indicator.getClass().getSimpleName()).append(": ");
-                if (indicator.getClass() == DBB.class) {
-                    s.append(Formatter.formatDecimal(((DBB) indicator).getStdevRelative(currentPrice)));
-                } else if (indicator.getClass() == EMA.class) {
-                    s.append(Formatter.formatDecimal(((EMA) indicator).getTempRelative(currentPrice)));
-                } else if (indicator.getClass() == MACD.class) {
-                    s.append(Formatter.formatDecimal(((MACD) indicator).getTempRelative(currentPrice)));
-                } else {
-                    s.append(Formatter.formatDecimal(indicator.getTemp(currentPrice)));
-                }
-            });
+            indicators.forEach(indicator -> s.append(", ").append(indicator.getClass().getSimpleName()).append(": ").append(Formatter.formatDecimal(indicator.getTemp(currentPrice))).append(", "));
         s.append(", hasActive: ").append(hasActiveTrade()).append(")");
         return s.toString();
     }

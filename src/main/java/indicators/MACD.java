@@ -52,7 +52,7 @@ public class MACD implements Indicator {
 
         double tempMACD = shortTemp - longTemp;
         double tempSignal = tempMACD * multiplier + currentSignal * (1 - multiplier);
-        return ((tempMACD - tempSignal) / tempSignal) * 10;
+        return (tempMACD - tempSignal) / Math.abs(tempSignal);
     }
 
     @Override

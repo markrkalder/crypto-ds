@@ -52,7 +52,7 @@ public class DBB implements Indicator {
     public double getStdevRelative(double newPrice) {
         double tempMidBand = sma.getTemp(newPrice);
         double tempStdev = sma.tempStandardDeviation(newPrice);
-        return (tempStdev / tempMidBand) * 1000;
+        return (tempStdev / tempMidBand);
     }
 
     @Override

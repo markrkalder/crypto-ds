@@ -1,12 +1,8 @@
-import numpy as np
-import tensorflow as tf
-import keras
 from tensorflow.python.keras.engine.base_layer import Layer
-from tensorflow.python.keras.layers import Dense, Dropout, LayerNormalization
-from tensorflow.python.layers.convolutional import Conv1D
+from tensorflow.python.keras.layers import Dense, Dropout, LayerNormalization, Conv1D
 
-print('Tensorflow version: {}'.format(tf.__version__))
-
+import tensorflow as tf
+import numpy as np
 
 class Time2Vector(Layer):
     def __init__(self, seq_len, **kwargs):
@@ -152,40 +148,3 @@ class TransformerEncoder(Layer):
                        'attn_heads': self.attn_heads,
                        'dropout_rate': self.dropout_rate})
         return config
-
-
-loss_tracker = keras.metrics.Mean(name="loss")
-market_loss_tracker = keras.metrics.Mean(name="market_loss")
-
-
-class TradingModel(keras.Model):
-    def train_step(self, data):
-        print(data)
-        x, y = data
-
-        with tf.GradientTape() as tape:
-            y_pred = self(x, training=True)  # Forward pass
-            # Compute our own loss
-            loss = keras.losses.mean_squared_error(y, y_pred)
-            market_loss = loss
-
-        # Compute gradients
-        trainable_vars = self.trainable_variables
-        gradients = tape.gradient(loss, trainable_vars)
-
-        # Update weights
-        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
-
-        # Compute our own metrics
-        loss_tracker.update_state(loss)
-        market_loss_tracker.update_state(market_loss)
-        return {"loss": loss_tracker.result(), "market_loss": market_loss_tracker.result()}
-
-    @property
-    def metrics(self):
-        # We list our `Metric` objects here so that `reset_states()` can be
-        # called automatically at the start of each epoch
-        # or at the start of `evaluate()`.
-        # If you don't implement this property, you have to call
-        # `reset_states()` yourself at the time of your choosing.
-        return [loss_tracker, market_loss_tracker]

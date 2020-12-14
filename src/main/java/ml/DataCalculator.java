@@ -15,7 +15,7 @@ public class DataCalculator {
         BuySell.setAccount(new LocalAccount("Investor Toomas", 1000));
 
 
-        String path = "backtesting/BTCUSDT_2020.11.30-2020.12.07.dat";
+        String path = "backtesting/BTCUSDT_2019.01.01-2020.01.01.dat";
         new Currency(new File(path).getName().split("_")[0], path, path.replace(".dat", "_ML.csv"));
         System.exit(0);
     }
